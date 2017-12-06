@@ -1,8 +1,6 @@
 from sympy import *
 import copy
 
-# def operator(x):
-#     return Symbol(x, commutative=False)
 
 class operator:
     def __init__(self, label, hilbertspace, hermitian=False):
@@ -57,7 +55,7 @@ class operator:
 
     def __rmul__(self, other):
         if isinstance(other, operator):
-            basis = self.basis*other.basis
+            basis = other.basis*self.basis
             return operator(other.symbol*self.symbol, basis)
         else:
             return operator(other*self.symbol, self.basis, self.ishermitian)
@@ -76,23 +74,7 @@ class operator:
 
     def __str__(self):
         string = str(self.symbol)
-        # adj = 'adjoint'
-        # index = [string.find(adj)]
-        # if len(index) > 0:
-        #     index.append(string[index[]])
         return string.replace("adjoint", "dagger")
-        # string = str(self.symbol)
-        # adj = 'adjoint'
-        # out = ''
-        # for i in range(len(string) - len(adj)):
-        #     if string[i:i+len(adj)] == adj:
-        #
-        #         out += string[i+len(adj)+1:]
-        # if string[:7] == 'adjoint':
-        #     out = string[8:-1] + "ᵗ"
-        # else:
-        #     out = string
-        # return out
 
     def __repr__(self):
         return self.__str__()
