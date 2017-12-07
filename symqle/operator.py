@@ -111,3 +111,7 @@ def copy_operator(x, new_basis):
     else:
         y.basis = new_basis
     return y
+
+def pretty(x):
+    init_printing()
+    return x.symbol
