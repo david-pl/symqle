@@ -79,6 +79,46 @@ class operator:
     def __repr__(self):
         return self.__str__()
 
+class projector(operator):
+
+    def __init__(self, to, fro, hilbertspace, customlabel=[]):
+
+        self.to = to
+        self.fro = fro
+        self.cl = customlabel
+        self.ishermitian = (to == fro)
+
+        if len(customlabel) == 0:
+            self.symbol = Symbol("|" + to + "><" + fro + "|", commutative=False)
+        else:
+            self.symbol = Symbol("%s_{%s, %s}" %(customlabel, to, fro), commutative=False)
+
+        if isinstance(hilbertspace, str):
+            self.basis = Symbol(hilbertspace, commutative=False)
+        else:
+            self.basis = hilbertspace
+
+    def dagger(self):
+        to = self.fro
+        fro = self.to
+        return projector(self.fro, self.to, self.basis, self.cl)
+
+    # def __mul__(self, other):
+    #     if isinstance(other, projector):
+    #         if self.fro == other.to:
+    #             return projector(self.to, other.fro, self.cl)
+    #         else:
+    #             return 0
+
+    # def __pow__(self, n):
+    #     if n == 1:
+    #         return self
+    #     else:
+    #         if self.to == self.fro:
+    #             return self
+    #         else:
+    #             return 0
+
 
 def dagger(x):
     return x.dagger()

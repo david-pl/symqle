@@ -6,10 +6,24 @@ class ruleset:
         self.rules = {}
         self.rules_basis = {}
         self.operators = operators
-        for i in range(len(operators) - 1):
+        for i in range(len(operators)):
             op1 = operators[i]
+            if isinstance(op1, projector):
+                self.add_rule(op1*dagger(op1)*op1, op1)
+                if op1.to == op1.fro:
+                    self.add_rule(op1**2, op1)
+                else:
+                    self.add_rule(op1**2, 0)
+
             for j in range(i+1, len(operators)):
                 op2 = operators[j]
+                if isinstance(op2, projector):
+                    self.add_rule(op2*dagger(op2)*op2, op2)
+                    if op2.to == op2.fro:
+                        self.add_rule(op2**2, op2)
+                    else:
+                        self.add_rule(op2**2, 0)
+
                 if not samebasis_nofactors(op1, op2):
                     self.commutator(op1, op2, 0, False)
                     if not op1.ishermitian:
@@ -17,6 +31,17 @@ class ruleset:
                         if not op2.ishermitian:
                             self.commutator(op1.dagger(), op2.dagger(), 0, False)
                             self.commutator(op1, op2.dagger(), 0, False)
+                elif isinstance(op1, projector) and isinstance(op2, projector):
+
+                    if op1.fro == op2.to:
+                        self.add_rule(op1*op2, projector(op1.to, op2.fro, op1.basis, op1.cl))
+                    else:
+                        self.add_rule(op1*op2, 0)
+
+                    if op1.to == op2.fro:
+                        self.add_rule(op2*op1, projector(op2.to, op1.fro, op1.basis, op1.cl))
+                    else:
+                        self.add_rule(op2*op1, 0)
 
     def add_rule(self, op, res, add_conjugate=True):
         if isinstance(res, operator):
