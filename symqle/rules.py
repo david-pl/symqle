@@ -38,6 +38,11 @@ class ruleset:
                     else:
                         self.add_rule(op1*op2, 0)
 
+                    if op1.to == op2.to:
+                        self.add_rule(dagger(op1)*op2, projector(op1.fro, op2.fro, op1.basis, op1.cl))
+                    else:
+                        self.add_rule(dagger(op1)*op2, 0)
+
                     if op1.to == op2.fro:
                         self.add_rule(op2*op1, projector(op2.to, op1.fro, op1.basis, op1.cl))
                     else:
@@ -48,10 +53,14 @@ class ruleset:
             self.rules[op.symbol] = res.symbol
             self.rules_basis[op.basis] = res.basis
             if add_conjugate and not op.ishermitian:
+                # if isinstance(op, projector):
+                #
+                # else:
                 op_dag = dagger(op)
                 res_dag = dagger(res)
                 self.rules[op_dag.symbol] = res_dag.symbol
                 self.rules_basis[op_dag.basis] = res_dag.basis
+
         else:
             self.rules[op.symbol] = res
             self.rules_basis[op.basis] = res

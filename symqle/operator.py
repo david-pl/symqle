@@ -103,12 +103,23 @@ class projector(operator):
         fro = self.to
         return projector(self.fro, self.to, self.basis, self.cl)
 
-    # def __mul__(self, other):
-    #     if isinstance(other, projector):
-    #         if self.fro == other.to:
-    #             return projector(self.to, other.fro, self.cl)
-    #         else:
-    #             return 0
+    def __mul__(self, other):
+        if isinstance(other, projector):
+            if self.fro == other.to:
+                return projector(self.to, other.fro, self.basis, self.cl)
+            else:
+                return operator(self.symbol, self.basis, self.to == self.fro)*other
+        else:
+            return operator(self.symbol, self.basis, self.to == self.fro)*other
+
+    def __rmul__(self, other):
+        if isinstance(other, projector):
+            if self.to == other.fro:
+                return projector(other.to, self.fro, self.basis, self.cl)
+            else:
+                return other*operator(self.symbol, self.basis, self.to == self.fro)
+        else:
+            return other*operator(self.symbol, self.basis, self.to == self.fro)
 
     # def __pow__(self, n):
     #     if n == 1:
