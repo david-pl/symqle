@@ -1,3 +1,4 @@
+# coding: utf-8
 from symqle import *
 
 # Number of atoms
@@ -11,26 +12,22 @@ for i in range(1, N+1):
 # Operators
 sm = []
 for i in range(1, N+1):
-    sm.append(operator('σ%i' %i, bases[i-1]))
+    sm.append(operator('\sigma_{%i}' %i, bases[i-1]))
 
 # Rules
 rs = ruleset(sm)
-for i in range(0, N):
-    rs.add_rule(sm[i]*sm[i], 0)
-    rs.add_rule(sm[i]*dagger(sm[i])*sm[i], sm[i])
-
-print(rs.rules)
+projector_rules(rs, sm)
 
 # Hamiltonian
 om = Symbol('ω')
 H = om*sum([dagger(s)*s for s in sm])
 
-print(H)
+print(pretty(H))
 
 # Lindblad
 gam = Symbol('γ')
 rates = [gam for i in range(N)]
 L = sm
 
-print(langevin(sm[1], H, L, rates, ruleset=rs, max_iter=3))
+print(pretty(langevin(sm[1], H, L, rates, ruleset=rs, max_iter=2)))
 
