@@ -70,3 +70,14 @@ def copy_rules(old_rules, old_basis, new_basis, new_ops):
 
     new_rules.operators.extend(new_ops)
     return new_rules
+
+def add_rule(ruleset, op, res, add_conjugate=True):
+    ruleset.add_rule(op, res, add_conjugate)
+
+def projector_rules(ruleset, ops):
+    for op in ops:
+        if op.ishermitian:
+            ruleset.add_rule(op**2, op)
+        else:
+            ruleset.add_rule(op**2, 0)
+            ruleset.add_rule(op*dagger(op)*op, op)
