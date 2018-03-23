@@ -1,14 +1,10 @@
-from sympy import *
+from sympy import Symbol, init_printing, adjoint, expand
+# from .rules import __RULES
 import copy
-
 
 class operator:
     def __init__(self, label, hilbertspace, hermitian=False):
-
-        if isinstance(hilbertspace, str):
-            self.basis = Symbol(hilbertspace, commutative=False)
-        else:
-            self.basis = hilbertspace
+        self.basis = hilbertspace
 
         if isinstance(label, str):
             self.symbol = Symbol(label, commutative=False)
@@ -115,3 +111,61 @@ def copy_operator(x, new_basis):
 def pretty(x):
     init_printing()
     return x.symbol
+
+def apply_rules(op, max_iter=1, iteration=1):
+    sym = expand(op.symbol).subs(__RULES)
+    basis = expand(op.basis).subs(__RULES_BASIS)
+    op_out = operator(sym, basis)
+    if iteration < max_iter:
+        return apply_rules(op_out, max_iter, iteration+1)
+    else:
+        return op_out
+
+def basis(label):
+    assert isinstance(label, str)
+    return Symbol(label, commutative=False)
+
+
+# Rules
+__RULES = {}
+__RULES_BASIS = {}
+
+def add_rule(op, res, add_conjugate=True):
+    if isinstance(res, operator):
+        __RULES[op.symbol] = res.symbol
+        __RULES_BASIS[op.basis] = res.basis
+        if add_conjugate and not op.ishermitian:
+            op_dag = dagger(op)
+            res_dag = dagger(res)
+            __RULES[op_dag.symbol] = res_dag.symbol
+            __RULES_BASIS[op_dag.basis] = res_dag.basis
+    else:
+        __RULES[op.symbol] = res
+        __RULES_BASIS[op.basis] = res
+        if add_conjugate and not op.ishermitian:
+            op_dag = dagger(op)
+            __RULES[op_dag.symbol] = res
+            __RULES_BASIS[op_dag.basis] = res
+
+def commutator_set(operators):
+    for i in range(len(operators) - 1):
+        op1 = operators[i]
+        for j in range(i+1, len(operators)):
+            op2 = operators[j]
+            if not samebasis_nofactors(op1, op2):
+                commutator_rule(op1, op2, 0, False)
+                if not op1.ishermitian:
+                    commutator_rule(op1.dagger(), op2, 0, False)
+                    if not op2.ishermitian:
+                        commutator_rule(op1.dagger(), op2.dagger(), 0, False)
+                        commutator_rule(op1, op2.dagger(), 0, False)
+
+def commutator_rule(a, b, res, add_conjugate=True):
+    add_rule(a*b, res + b*a, add_conjugate)
+
+def show_rules():
+    print(__RULES)
+
+def clear_rules():
+    __RULES = {}
+    __RULES_BASIS = {}

@@ -1,7 +1,6 @@
-from symqle.rules import *
-from symqle.operator import *
+from .operator import commutator, apply_rules
 
-def langevin(op, H, L=[], rates=[], noise=[], ruleset=None, max_iter=1):
+def langevin(op, H, L=[], rates=[], noise=[], max_iter=1):
     L_op = []
     for i in range(0, len(L)):
         L_op.append(-rates[i]*commutator(op, L[i].dagger())*0.5*L[i]+
@@ -12,7 +11,4 @@ def langevin(op, H, L=[], rates=[], noise=[], ruleset=None, max_iter=1):
             sqrt(rates[i])*noise[i].dagger()*commutator(op, L[i]))
 
     LE = 1j*commutator(H, op) + sum(L_op)
-    if ruleset == None:
-        return LE
-    else:
-        return apply_rules(LE, ruleset, max_iter)
+    return apply_rules(LE, max_iter)
