@@ -34,25 +34,29 @@ def nlevel(b, N, label="s", index=None):
                 ket2 = str2[-3]
 
                 if bra1 == ket2:
-                    new_op = operator("%s_{%s%s}" %(label, ket1, bra2), b)
+                    new_op = operator("%s_{%s%s}" %(label, ket1, bra2), b,
+                        add_to_list=False)
                 else:
                     new_op = 0
                 add_rule(sigmas[i]*sigmas[j], new_op)
 
                 if bra2 == ket1:
-                    new_op = operator("%s_{%s%s}" %(label, ket2, bra1), b)
+                    new_op = operator("%s_{%s%s}" %(label, ket2, bra1), b,
+                        add_to_list=False)
                 else:
                     new_op = 0
                 add_rule(sigmas[j]*sigmas[i], new_op)
 
                 if bra1 == bra2:
-                    new_op =operator("%s_{%s%s}" %(label, ket1, ket2), b)
+                    new_op = operator("%s_{%s%s}" %(label, ket1, ket2), b,
+                        add_to_list=False)
                 else:
                     new_op = 0
                 add_rule(sigmas[i]*dagger(sigmas[j]), new_op)
 
                 if ket1 == ket2:
-                    new_op = operator("%s_{%s%s}" %(label, bra1, bra2), b)
+                    new_op = operator("%s_{%s%s}" %(label, bra1, bra2), b,
+                        add_to_list=False)
                 else:
                     new_op = 0
                 add_rule(dagger(sigmas[i])*sigmas[j], new_op)
@@ -64,25 +68,29 @@ def nlevel(b, N, label="s", index=None):
                 ket2 = str2[-7]
 
                 if bra1 == ket2:
-                    new_op = operator("%s_{%s%s,(%i)}" %(label, ket1, bra2, index), b)
+                    new_op = operator("%s_{%s%s,(%i)}" %(label, ket1, bra2, index),
+                        b, add_to_list=False)
                 else:
                     new_op = 0
                 add_rule(sigmas[i]*sigmas[j], new_op)
 
                 if bra2 == ket1:
-                    new_op = operator("%s_{%s%s,(%i)}" %(label, ket2, bra1, index), b)
+                    new_op = operator("%s_{%s%s,(%i)}" %(label, ket2, bra1, index),
+                        b, add_to_list=False)
                 else:
                     new_op = 0
                 add_rule(sigmas[j]*sigmas[i], new_op)
 
                 if bra1 == bra2:
-                    new_op =operator("%s_{%s%s,(%i)}" %(label, ket1, ket2, index), b)
+                    new_op =operator("%s_{%s%s,(%i)}" %(label, ket1, ket2, index),
+                    b, add_to_list=False)
                 else:
                     new_op = 0
                 add_rule(sigmas[i]*dagger(sigmas[j]), new_op)
 
                 if ket1 == ket2:
-                    new_op = operator("%s_{%s%s,(%i)}" %(label, bra1, bra2, index), b)
+                    new_op = operator("%s_{%s%s,(%i)}" %(label, bra1, bra2, index),
+                        b, add_to_list=False)
                 else:
                     new_op = 0
                 add_rule(dagger(sigmas[i])*sigmas[j], new_op)

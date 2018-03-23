@@ -2,8 +2,14 @@ from sympy import Symbol, init_printing, adjoint, expand
 # from .rules import __RULES
 import copy
 
+# Global set of rules and operators
+__RULES = {}
+__RULES_BASIS = {}
+OPERATORS_ = []
+tmp = 0
+
 class operator:
-    def __init__(self, label, hilbertspace, hermitian=False):
+    def __init__(self, label, hilbertspace, hermitian=False, add_to_list=True):
         self.basis = hilbertspace
 
         if isinstance(label, str):
@@ -13,11 +19,17 @@ class operator:
 
         self.ishermitian = hermitian
 
+        # Add to global operator list
+        if add_to_list:
+            global OPERATORS_
+            OPERATORS_.append(self)
+            commutator_set(OPERATORS_)
+
     def dagger(self):
         if self.ishermitian:
             return self
         else:
-            return operator(adjoint(self.symbol), self.basis)
+            return operator(adjoint(self.symbol), self.basis, add_to_list=False)
 
     def hermitian(self):
         self.ishermitian = True
@@ -26,15 +38,16 @@ class operator:
         if isinstance(other, operator):
             basis = self.basis + other.basis
             return operator(self.symbol + other.symbol, basis,
-                self.ishermitian and other.ishermitian)
+                self.ishermitian and other.ishermitian, False)
         else:
-            return operator(self.symbol + other, self.basis, self.ishermitian)
+            return operator(self.symbol + other, self.basis, self.ishermitian,
+                False)
 
     def __radd__(self, other):
         return self + other
 
     def __neg__(self):
-        return operator(-self.symbol, self.basis, self.ishermitian)
+        return operator(-self.symbol, self.basis, self.ishermitian, False)
 
     def __sub__(self, other):
         return self + (-other)
@@ -45,19 +58,20 @@ class operator:
     def __mul__(self, other):
         if isinstance(other, operator):
             basis = self.basis*other.basis
-            return operator(self.symbol*other.symbol, basis)
+            return operator(self.symbol*other.symbol, basis, add_to_list=False)
         else:
-            return operator(self.symbol*other, self.basis, self.ishermitian)
+            return operator(self.symbol*other, self.basis, self.ishermitian, False)
 
     def __rmul__(self, other):
         if isinstance(other, operator):
             basis = other.basis*self.basis
-            return operator(other.symbol*self.symbol, basis)
+            return operator(other.symbol*self.symbol, basis,
+                self.ishermitian and other.ishermitian, False)
         else:
-            return operator(other*self.symbol, self.basis, self.ishermitian)
+            return operator(other*self.symbol, self.basis, self.ishermitian, False)
 
     def __pow__(self, n):
-        return operator(self.symbol**n, self.basis, self.ishermitian)
+        return operator(self.symbol**n, self.basis, self.ishermitian, False)
 
     def __eq__(self, other):
         if isinstance(other, operator):
@@ -74,7 +88,6 @@ class operator:
 
     def __repr__(self):
         return self.__str__()
-
 
 def dagger(x):
     return x.dagger()
@@ -112,14 +125,12 @@ def pretty(x):
     init_printing()
     return x.symbol
 
-def apply_rules(op, max_iter=1, iteration=1):
-    sym = expand(op.symbol).subs(__RULES)
-    basis = expand(op.basis).subs(__RULES_BASIS)
-    op_out = operator(sym, basis)
-    if iteration < max_iter:
-        return apply_rules(op_out, max_iter, iteration+1)
-    else:
-        return op_out
+def show_operators():
+    print(OPERATORS_)
+
+def clear_operators():
+    global OPERATORS_
+    OPERATORS_ = []
 
 def basis(label):
     assert isinstance(label, str)
@@ -127,8 +138,14 @@ def basis(label):
 
 
 # Rules
-__RULES = {}
-__RULES_BASIS = {}
+def apply_rules(op, max_iter=1, iteration=1):
+    sym = expand(op.symbol).subs(__RULES)
+    basis = expand(op.basis).subs(__RULES_BASIS)
+    op_out = operator(sym, basis, add_to_list=False)
+    if iteration < max_iter:
+        return apply_rules(op_out, max_iter, iteration+1)
+    else:
+        return op_out
 
 def add_rule(op, res, add_conjugate=True):
     if isinstance(res, operator):
@@ -167,5 +184,10 @@ def show_rules():
     print(__RULES)
 
 def clear_rules():
+    global __RULES, __RULES_BASIS
     __RULES = {}
     __RULES_BASIS = {}
+
+def clear():
+    clear_operators()
+    clear_rules()
