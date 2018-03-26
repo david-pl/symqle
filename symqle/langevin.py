@@ -1,4 +1,5 @@
 from .operator import commutator, apply_rules
+from sympy import sqrt
 
 def langevin(op, H, L=[], rates=[], noise=[], max_iter=1):
     L_op = []
