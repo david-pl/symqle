@@ -1,5 +1,5 @@
 from .operator import *
-# from .rules import *
+del globals()['OPERATORS_']
 from .langevin import *
 from .fock import *
 from .nlevel import *
