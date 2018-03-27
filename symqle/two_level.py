@@ -13,5 +13,6 @@ def two_level(b, label="s", index=None):
     sp = dagger(sm)
     add_rule(sm**2, 0)
     add_rule(sm*sp*sm, sm)
+    add_rule(sm*sp, 1 - sp*sm, add_conjugate=False)
 
     return sm, sp
