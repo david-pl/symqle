@@ -1,11 +1,12 @@
-from sympy import Symbol, init_printing, adjoint, expand
+from sympy import Symbol, init_printing, adjoint, expand, conjugate, prod
+import sympy
+# from sympy.core import add.Add, mul.Mul
 import copy
 
 # Global set of rules and operators
 __RULES = {}
 __RULES_BASIS = {}
 OPERATORS_ = []
-tmp = 0
 
 class operator:
     def __init__(self, label, hilbertspace, hermitian=False):
@@ -134,6 +135,131 @@ def clear_operators():
 def basis(label):
     assert isinstance(label, str)
     return Symbol(label, commutative=False)
+
+def show_basis(op):
+    assert isinstance(op, operator)
+    return op.basis.free_symbols
+
+# Average
+def average(op, order=1):
+    assert isinstance(op, operator)
+
+    sym = op.symbol
+    if isinstance(sym, sympy.mul.Mul):
+        return factorize_prod(sym, order)
+    elif isinstance(sym, sympy.add.Add):
+        return factorize_sum(sym, order)
+        # number, summands = sym.as_coeff_add()
+    elif isinstance(sym, sympy.symbol.Symbol):
+        return Symbol("<" + str(sym) + ">")
+    elif isinstance(sym, sympy.power.Pow):
+        return factorize_pow(sym, order)
+    else:
+        raise("ERROR: Unsupported math operation!")
+
+
+def factorize_prod(sym, order):
+    factor, ops = sym.as_coeff_mul()
+    ops_new = []
+    if len(ops) > order:
+        bases_ = []
+        for i in range(len(ops)):
+        #     bases_.append(find_basis(ops[i]))
+            if isinstance(ops[i], sympy.symbol.Symbol):
+                op_str = str(ops[i])
+
+                is_operator = False
+                for OP_ in OPERATORS_:
+                    if ops[i] == OP_.symbol:
+                        is_operator = True
+                        break
+
+                if is_operator:
+                    ops_new.append(Symbol("<" + op_str + ">"))
+                else:
+                    ops_new.append(ops[i])
+            elif isinstance(ops[i], adjoint):
+                op_str = str(ops[i])
+                op_str = op_str.replace("adjoint(", "")[0:-1]
+                ops_new.append(conjugate(Symbol("<" + op_str + ">")))
+            elif isinstance(ops[i], sympy.power.Pow):
+                ops_new.append(factorize_pow(ops[i], order))
+            # elif isinstance(ops[i], sympy.numbers.ImaginaryUnit):
+                # ops_new.append(ops[i])
+            else:
+                # print("WARNING:" +  str(type(ops[i])))
+                ops_new.append(ops[i])
+    else:
+        op_str = "*".join([str(o) for o in ops])
+        ops_new = [Symbol("<" + op_str + ">")]
+    return factor*prod(ops_new)
+
+def factorize_sum(sym, order):
+    number, ops = sym.as_coeff_add()
+    expr = []
+    for i in range(len(ops)):
+        if isinstance(ops[i], sympy.mul.Mul):
+            prod_new = factorize_prod(ops[i], order)
+            expr.append(prod_new)
+        elif isinstance(ops[i], sympy.add.Add):
+            sum_new = factorize_sum(ops[i], order)
+            expr.append(sum_new)
+        elif isinstance(ops[i], sympy.symbol.Symbol):
+            is_operator = False
+            for OP_ in OPERATORS_:
+                if ops[i] == OP_.symbol:
+                    is_operator = True
+                    break
+            if is_operator:
+                op_ = Symbol("<" + str(ops[i]) + ">")
+            else:
+                op_ = ops[i]
+            expr.append(op_)
+        elif isinstance(ops[i], sympy.numbers.ImaginaryUnit):
+            expr.append(ops[i])
+        elif isinstance(ops[i], adjoint):
+            op_str = str(ops[i])
+            op_str = op_str.replace("adjoint(", "")[0:-1]
+            op_new_ = conjugate(Symbol("<" + op_str + ">"))
+            expr.append(op_new_)
+        elif isinstance(ops[i], sympy.power.Pow):
+            expr.append(factorize_pow)
+        else:
+            print("WARNING:" + str(type(ops[i])))
+    return number + sum(expr)
+
+def factorize_pow(sym, order):
+    n, op = sym.exp, sym.base
+
+    is_operator = False
+    for OP_ in OPERATORS_:
+        if op == OP_.symbol:
+            is_operator = True
+            break
+
+    if is_operator:
+        op_new = Symbol("<" + str(op) + ">")
+        return op_new**n
+    elif isinstance(op, adjoint):
+        op_str = str(op)
+        op_str = op_str.replace("adjoint(", "")[0:-1]
+        return conjugate(Symbol("<" + op_str + ">")**n)
+    else:
+        return sym
+
+
+def find_basis(op):
+    # assert isinstance(op, Symbol)
+    check = 0
+    for OP_ in OPERATORS_:
+        if op == OP_.symbol or op == dagger(OP_).symbol:
+            break
+        else:
+            check += 1
+    if check == len(OPERATORS_):
+        print("WARNING: Untracked operator!")
+
+    return OP_.basis
 
 
 # Rules
