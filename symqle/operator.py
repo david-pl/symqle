@@ -151,7 +151,14 @@ def average(op, order=1):
         return factorize_sum(sym, order)
         # number, summands = sym.as_coeff_add()
     elif isinstance(sym, sympy.symbol.Symbol):
-        return Symbol("<" + str(sym) + ">")
+        if is_operator(sym):
+            return Symbol("<" + str(sym) + ">")
+        else:
+            return sym
+    elif isinstance(sym, adjoint):
+        op_str = str(sym)
+        op_str = op_str.replace("adjoint(", "")[0:-1]
+        return conjugate(Symbol("<" + op_str + ">"))
     elif isinstance(sym, sympy.power.Pow):
         return factorize_pow(sym, order)
     else:
@@ -167,14 +174,7 @@ def factorize_prod(sym, order):
         #     bases_.append(find_basis(ops[i]))
             if isinstance(ops[i], sympy.symbol.Symbol):
                 op_str = str(ops[i])
-
-                is_operator = False
-                for OP_ in OPERATORS_:
-                    if ops[i] == OP_.symbol:
-                        is_operator = True
-                        break
-
-                if is_operator:
+                if is_operator(ops[i]):
                     ops_new.append(Symbol("<" + op_str + ">"))
                 else:
                     ops_new.append(ops[i])
@@ -205,12 +205,7 @@ def factorize_sum(sym, order):
             sum_new = factorize_sum(ops[i], order)
             expr.append(sum_new)
         elif isinstance(ops[i], sympy.symbol.Symbol):
-            is_operator = False
-            for OP_ in OPERATORS_:
-                if ops[i] == OP_.symbol:
-                    is_operator = True
-                    break
-            if is_operator:
+            if is_operator(ops[i]):
                 op_ = Symbol("<" + str(ops[i]) + ">")
             else:
                 op_ = ops[i]
@@ -231,13 +226,7 @@ def factorize_sum(sym, order):
 def factorize_pow(sym, order):
     n, op = sym.exp, sym.base
 
-    is_operator = False
-    for OP_ in OPERATORS_:
-        if op == OP_.symbol:
-            is_operator = True
-            break
-
-    if is_operator:
+    if is_operator(op):
         op_new = Symbol("<" + str(op) + ">")
         return op_new**n
     elif isinstance(op, adjoint):
@@ -261,6 +250,11 @@ def find_basis(op):
 
     return OP_.basis
 
+def is_operator(op):
+    for OP_ in OPERATORS_:
+        if op == OP_.symbol:
+            return True
+    return False
 
 # Rules
 def apply_rules(op, max_iter=1, iteration=1):
