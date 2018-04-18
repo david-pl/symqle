@@ -1,7 +1,8 @@
-from sympy import Symbol, init_printing, adjoint, expand, conjugate, prod
+from sympy import Symbol, init_printing, adjoint, expand, conjugate, prod, factorial, binomial
 import sympy
 # from sympy.core import add.Add, mul.Mul
 import copy
+import itertools
 
 # Global set of rules and operators
 __RULES = {}
@@ -166,37 +167,51 @@ def average(op, order=1):
 
 
 def factorize_prod(sym, order):
-    factor, ops = sym.as_coeff_mul()
-    ops_new = []
-    if len(ops) > order:
-        bases_ = []
-        for i in range(len(ops)):
-        #     bases_.append(find_basis(ops[i]))
-            if isinstance(ops[i], sympy.symbol.Symbol):
-                op_str = str(ops[i])
-                if is_operator(ops[i]):
-                    ops_new.append(Symbol("<" + op_str + ">"))
-                else:
-                    ops_new.append(ops[i])
-            elif isinstance(ops[i], adjoint):
-                op_str = str(ops[i])
-                op_str = op_str.replace("adjoint(", "")[0:-1]
-                ops_new.append(conjugate(Symbol("<" + op_str + ">")))
-            elif isinstance(ops[i], sympy.power.Pow):
-                ops_new.append(factorize_pow(ops[i], order))
-            # elif isinstance(ops[i], sympy.numbers.ImaginaryUnit):
-                # ops_new.append(ops[i])
+    factor, coeffs = sym.as_coeff_mul()
+
+    # Get which coefficients are operators and parameters (symbols)
+    ops = []
+    syms = []
+    for i in range(len(coeffs)):
+        if is_operator(coeffs[i]):
+            ops.append(coeffs[i])
+        elif isinstance(coeffs[i], sympy.power.Pow):
+            if is_operator(coeffs[i].base):
+                tmp = [coeffs[i].base for k in range(coeffs[i].exp)]
+                ops.extend(tmp)
             else:
-                # print("WARNING:" +  str(type(ops[i])))
-                ops_new.append(ops[i])
+                syms.append(coeffs[i])
+        else:
+            syms.append(coeffs[i])
+
+    if len(syms) == 0:
+        syms = [1]
+
+    # Factorize if product has more constituents than order
+    if len(ops) > order:
+        bases_ = find_bases(ops)
+        decision = decide_factor(bases_, order)
+        if not decision:
+            ops_new = cumulant_expansion(ops, order)
+
+    # Return average if product is smaller order
     else:
-        op_str = "*".join([str(o) for o in ops])
-        ops_new = [Symbol("<" + op_str + ">")]
-    return factor*prod(ops_new)
+        if len(ops) > 0:
+            op_str = str(prod(ops))
+            if len(ops) == 1 and isinstance(ops[0], adjoint):
+                op_str = op_str.replace("adjoint(", "")[:-1]
+                ops_new = conjugate(Symbol("<" + op_str + ">"))
+            else:
+                ops_new = Symbol("<" + op_str + ">")
+        else:
+            ops_new = 1
+
+    return factor*prod(syms)*ops_new
 
 def factorize_sum(sym, order):
     number, ops = sym.as_coeff_add()
     expr = []
+    # TODO: Clean-up
     for i in range(len(ops)):
         if isinstance(ops[i], sympy.mul.Mul):
             prod_new = factorize_prod(ops[i], order)
@@ -237,24 +252,80 @@ def factorize_pow(sym, order):
         return sym
 
 
-def find_basis(op):
-    # assert isinstance(op, Symbol)
-    check = 0
-    for OP_ in OPERATORS_:
-        if op == OP_.symbol or op == dagger(OP_).symbol:
-            break
+def find_bases(ops):
+    bases_ = []
+    for o in ops:
+        if isinstance(o, sympy.symbol.Symbol):
+            if is_operator(o):
+                bases_.append(find_basis(o))
+            else:
+                bases_.append(0)
+        elif isinstance(o, adjoint):
+            bases_.append(find_basis_adjoint(o))
+        elif isinstance(o, sympy.power.Pow):
+            n, op_ = o.exp, o.base
+            if is_operator(op_):
+                bases_.append(find_basis(op_))
+            elif isinstance(op_, adjoint):
+                bases_.append(find_basis_adjoint(op_))
+            else:
+                bases_.append(0)
         else:
-            check += 1
-    if check == len(OPERATORS_):
-        print("WARNING: Untracked operator!")
+            bases_.append(0)
+    return bases_
 
-    return OP_.basis
+def find_basis(op):
+    for OP_ in OPERATORS_:
+        if op == OP_.symbol:
+            return OP_.basis
+    print("WARNING: Untracked operator!")
+
+def find_basis_adjoint(op):
+    for OP_ in OPERATORS_:
+        if op == adjoint(OP_.symbol):
+            return OP_.basis
+    print("WARNING: Untracked operator!")
 
 def is_operator(op):
     for OP_ in OPERATORS_:
-        if op == OP_.symbol:
+        if op == OP_.symbol or op == adjoint(OP_.symbol):
             return True
     return False
+
+def decide_factor(bases, order):
+    # TODO: Make more sophisticated choice
+    return 0
+
+def cumulant_expansion(ops, order):
+    # Get all combinations
+    combs = itertools.combinations(ops, order)
+
+    ops_new = []
+    if order == 1:
+        for c in combs:
+            op_str = str(c[0])
+            if "adjoint" in op_str:
+                op_str = op_str.replace("adjoint(", "")[0:-1]
+                op_str = "<" + op_str + ">"
+                ops_new.append(conjugate(Symbol(op_str)))
+            else:
+                op_str = "<" + op_str + ">"
+                ops_new.append(Symbol(op_str))
+        return prod(ops_new)
+
+    else:
+        for c in combs:
+            op_str = str(prod(c))
+            if len(c) == 1 and "adjoint" in op_str:
+                op_str = op_str.replace("adjoint(", "")[:-1]
+                ops_new.append(conjugate(Symbol("<" + op_str + ">")))
+            else:
+                ops_new.append(Symbol("<" + op_str + ">"))
+
+        n = binomial(len(ops), order)
+        return sum(ops_new)/n
+
+
 
 # Rules
 def apply_rules(op, max_iter=1, iteration=1):
