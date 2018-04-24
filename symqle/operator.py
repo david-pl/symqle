@@ -142,14 +142,14 @@ def show_basis(op):
     return op.basis.free_symbols
 
 # Average
-def average(op, order=1):
+def average(op, order=1, divide_cumulants=False):
     assert isinstance(op, operator)
 
     sym = op.symbol
     if isinstance(sym, sympy.mul.Mul):
-        return factorize_prod(sym, order)
+        return factorize_prod(sym, order, divide_cumulants)
     elif isinstance(sym, sympy.add.Add):
-        return factorize_sum(sym, order)
+        return factorize_sum(sym, order, divide_cumulants)
         # number, summands = sym.as_coeff_add()
     elif isinstance(sym, sympy.symbol.Symbol):
         if is_operator(sym):
@@ -166,7 +166,7 @@ def average(op, order=1):
         raise("ERROR: Unsupported math operation!")
 
 
-def factorize_prod(sym, order):
+def factorize_prod(sym, order, divide_cumulants=False):
     factor, coeffs = sym.as_coeff_mul()
 
     # Get which coefficients are operators and parameters (symbols)
@@ -192,7 +192,7 @@ def factorize_prod(sym, order):
         bases_ = find_bases(ops)
         decision = decide_factor(bases_, order)
         if not decision:
-            ops_new = cumulant_expansion(ops, order)
+            ops_new = cumulant_expansion(ops, order, divide_cumulants)
 
     # Return average if product is smaller order
     else:
@@ -208,7 +208,7 @@ def factorize_prod(sym, order):
 
     return factor*prod(syms)*ops_new
 
-def factorize_sum(sym, order):
+def factorize_sum(sym, order, divide_cumulants=False):
     number, ops = sym.as_coeff_add()
     expr = []
     # TODO: Clean-up
@@ -296,13 +296,17 @@ def decide_factor(bases, order):
     # TODO: Make more sophisticated choice
     return 0
 
-def cumulant_expansion(ops, order):
-    # Get all combinations
-    combs = itertools.combinations(ops, order)
+def cumulant_expansion(ops, order, divide=False):
+    # Get all combinations of length order
+    combs_order = list(itertools.combinations(ops, order))
+
+    # Get all remainding combinations
+    combs_remain = list(itertools.combinations(ops, len(ops) - order))
+    combs_remain.reverse()
 
     ops_new = []
     if order == 1:
-        for c in combs:
+        for c in combs_order:
             op_str = str(c[0])
             if "adjoint" in op_str:
                 op_str = op_str.replace("adjoint(", "")[0:-1]
@@ -314,15 +318,32 @@ def cumulant_expansion(ops, order):
         return prod(ops_new)
 
     else:
-        for c in combs:
-            op_str = str(prod(c))
-            if len(c) == 1 and "adjoint" in op_str:
-                op_str = op_str.replace("adjoint(", "")[:-1]
-                ops_new.append(conjugate(Symbol("<" + op_str + ">")))
-            else:
-                ops_new.append(Symbol("<" + op_str + ">"))
+        for i in range(len(combs_order)):
+            ops_tmp = []
 
-        n = binomial(len(ops), order)
+            op_str = str(prod(combs_order[i]))
+            if len(combs_order[i]) == 1 and "adjoint" in op_str:
+                op_str = op_str.replace("adjoint(", "")[:-1]
+                ops_tmp.append(conjugate(Symbol("<" + op_str + ">")))
+            else:
+                ops_tmp.append(Symbol("<" + op_str + ">"))
+
+            op_str2 = str(prod(combs_remain[i]))
+            if "adjoint" in op_str2:
+                if len(combs_remain[i]) == 1:
+                    op_str2 = op_str2.replace("adjoint(", "")[:-1]
+                    ops_tmp.append(conjugate(Symbol("<" + op_str2 + ">")))
+                #TODO: replace "adjoint()" by "^\dagger" for longer averages
+            else:
+                ops_tmp.append(Symbol("<" + op_str2 + ">"))
+
+
+            ops_new.append(prod(ops_tmp))
+
+        if divide:
+            n = binomial(len(ops), order)
+        else:
+            n = 1
         return sum(ops_new)/n
 
 
