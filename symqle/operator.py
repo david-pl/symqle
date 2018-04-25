@@ -142,8 +142,9 @@ def show_basis(op):
     return op.basis.free_symbols
 
 # Average
-def average(op, order=1, divide_cumulants=False):
-    assert isinstance(op, operator)
+def average(op_, order=1, divide_cumulants=False, max_iter=1):
+    assert isinstance(op_, operator)
+    op = apply_rules(op_, max_iter=max_iter)
 
     sym = op.symbol
     if isinstance(sym, sympy.mul.Mul):
