@@ -142,15 +142,15 @@ def show_basis(op):
     return op.basis.free_symbols
 
 # Average
-def average(op_, order=1, divide_cumulants=False, max_iter=1):
+def average(op_, order=1, divide_cumulants=False, max_iter=1, hard_cutoff=False):
     assert isinstance(op_, operator)
     op = apply_rules(op_, max_iter=max_iter)
 
     sym = op.symbol
     if isinstance(sym, sympy.mul.Mul):
-        return factorize_prod(sym, order, divide_cumulants)
+        return factorize_prod(sym, order, divide_cumulants, hard_cutoff)
     elif isinstance(sym, sympy.add.Add):
-        return factorize_sum(sym, order, divide_cumulants)
+        return factorize_sum(sym, order, divide_cumulants, hard_cutoff)
         # number, summands = sym.as_coeff_add()
     elif isinstance(sym, sympy.symbol.Symbol):
         if is_operator(sym):
@@ -167,7 +167,7 @@ def average(op_, order=1, divide_cumulants=False, max_iter=1):
         raise("ERROR: Unsupported math operation!")
 
 
-def factorize_prod(sym, order, divide_cumulants=False):
+def factorize_prod(sym, order, divide_cumulants=False, hard_cutoff=False):
     factor, coeffs = sym.as_coeff_mul()
 
     # Get which coefficients are operators and parameters (symbols)
@@ -190,10 +190,13 @@ def factorize_prod(sym, order, divide_cumulants=False):
 
     # Factorize if product has more constituents than order
     if len(ops) > order:
-        bases_ = find_bases(ops)
-        decision = decide_factor(bases_, order)
-        if not decision:
-            ops_new = cumulant_expansion(ops, order, divide_cumulants)
+        if hard_cutoff:
+            ops_new = 0
+        else:
+            bases_ = find_bases(ops)
+            decision = decide_factor(bases_, order)
+            if not decision:
+                ops_new = cumulant_expansion(ops, order, divide_cumulants)
 
     # Return average if product is smaller order
     else:
@@ -209,16 +212,16 @@ def factorize_prod(sym, order, divide_cumulants=False):
 
     return factor*prod(syms)*ops_new
 
-def factorize_sum(sym, order, divide_cumulants=False):
+def factorize_sum(sym, order, divide_cumulants=False, hard_cutoff=False):
     number, ops = sym.as_coeff_add()
     expr = []
     # TODO: Clean-up
     for i in range(len(ops)):
         if isinstance(ops[i], sympy.mul.Mul):
-            prod_new = factorize_prod(ops[i], order)
+            prod_new = factorize_prod(ops[i], order, hard_cutoff=hard_cutoff)
             expr.append(prod_new)
         elif isinstance(ops[i], sympy.add.Add):
-            sum_new = factorize_sum(ops[i], order)
+            sum_new = factorize_sum(ops[i], order, hard_cutoff=hard_cutoff)
             expr.append(sum_new)
         elif isinstance(ops[i], sympy.symbol.Symbol):
             if is_operator(ops[i]):
@@ -234,17 +237,23 @@ def factorize_sum(sym, order, divide_cumulants=False):
             op_new_ = conjugate(Symbol("<" + op_str + ">"))
             expr.append(op_new_)
         elif isinstance(ops[i], sympy.power.Pow):
-            expr.append(factorize_pow)
+            expr.append(factorize_pow, hard_cutoff)
         else:
             print("WARNING:" + str(type(ops[i])))
     return number + sum(expr)
 
-def factorize_pow(sym, order):
+def factorize_pow(sym, order, hard_cutoff=False):
     n, op = sym.exp, sym.base
 
     if is_operator(op):
-        op_new = Symbol("<" + str(op) + ">")
-        return op_new**n
+        if n > order:
+            if hard_cutoff:
+                return 0
+            else:
+                factorize_prod(prod([op for i in range(n)]), order, hard_cutoff=hard_cutoff)
+        else:
+            op_new = Symbol("<" + str(op) + ">")
+            return op_new**n
     elif isinstance(op, adjoint):
         op_str = str(op)
         op_str = op_str.replace("adjoint(", "")[0:-1]
@@ -337,7 +346,6 @@ def cumulant_expansion(ops, order, divide=False):
                 #TODO: replace "adjoint()" by "^\dagger" for longer averages
             else:
                 ops_tmp.append(Symbol("<" + op_str2 + ">"))
-
 
             ops_new.append(prod(ops_tmp))
 
