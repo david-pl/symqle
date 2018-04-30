@@ -339,8 +339,7 @@ def cumulant_expansion(ops, order, divide=False):
                 ops_tmp.append(Symbol("<" + op_str + ">"))
 
             op_str2 = str(prod(combs_remain[i]))
-            if "adjoint" in op_str2:
-                if len(combs_remain[i]) == 1:
+            if "adjoint" in op_str2 and len(combs_remain[i]) == 1:
                     op_str2 = op_str2.replace("adjoint(", "")[:-1]
                     ops_tmp.append(conjugate(Symbol("<" + op_str2 + ">")))
                 #TODO: replace "adjoint()" by "^\dagger" for longer averages
